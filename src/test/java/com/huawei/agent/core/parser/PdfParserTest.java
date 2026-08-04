@@ -100,6 +100,25 @@ class PdfParserTest {
         assertEquals("## 2 Second", sections.get(1).getTitle());
     }
 
+    @Test void thirdLevelHeadingStaysInSecondLevelSectionPreview() throws Exception {
+        byte[] bytes = pdf(new PageText().bold(72, 750, 22, "1 Chapter")
+                .bold(72, 710, 17, "1.1 Section")
+                .at(72, 680, 11, "section introduction")
+                .bold(72, 640, 14, "1.1.1 Detail")
+                .at(72, 610, 11, "detail body")
+                .bold(72, 560, 17, "1.2 Next")
+                .at(72, 530, 11, "next body"));
+
+        List<MarkdownSection> sections = parse(bytes);
+
+        assertEquals(3, sections.size());
+        assertEquals("## 1 Chapter", sections.get(0).getTitle());
+        assertEquals("### 1.1 Section", sections.get(1).getTitle());
+        assertTrue(sections.get(1).getContent().contains("#### 1.1.1 Detail"));
+        assertTrue(sections.get(1).getContent().contains("detail body"));
+        assertEquals("### 1.2 Next", sections.get(2).getTitle());
+    }
+
     @Test void recognizesStableColumnTableAndEscapesCells() throws Exception {
         PageText p = new PageText().at(72,720,11,"Name").at(250,720,11,"Value")
                 .at(72,690,11,"A|B").at(250,690,11,"C\\D");

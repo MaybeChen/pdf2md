@@ -123,4 +123,4 @@ Section 只会在识别到真正的标题时切分，普通正文行和编号列
 
 具体来说，`1 Introduction`、`1.2 Scope` 可以作为章节编号，而 `1. Upload file`、`2. Validate file` 会按编号列表处理。仅仅使用粗体也不足以切分 section，因此同为粗体的 `Description:`、表格文字或正文不会各自生成 section。
 
-聚合过程与 `WordParser.parseDocx` 相同：维护一个 `currentContent`，普通段落、列表和表格只追加内容，只有遇到下一个可信标题时才把此前累计内容保存为 section；循环结束后再保存最后一个 section。PDF 无法读取 Word 的 Heading 样式，所以只有“标题识别”仍是基于版面的推断。为避免普通字号波动触发切分，非编号标题现在需要比正文主字号至少大 2pt。
+聚合过程维护一个 `currentContent`：普通段落、列表和表格只追加内容；一级、二级标题（Markdown `##`、`###`）开始新的 section；三级至五级标题仍输出为 Markdown 标题，但追加到最近的一级或二级 section 中，因此会出现在该父 section 的 preview。循环结束后保存最后一个 section。PDF 无法读取 Word 的 Heading 样式，所以只有“标题识别”仍是基于版面的推断。为避免普通字号波动触发切分，非编号标题需要比正文主字号至少大 2pt。

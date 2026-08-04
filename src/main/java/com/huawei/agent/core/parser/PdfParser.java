@@ -57,13 +57,10 @@ public class PdfParser implements FileParser {
         StringBuilder content = new StringBuilder();
         for (Block block : blocks) {
             if (block.headingLevel > 0) {
-                // This intentionally mirrors WordParser.parseDocx: only a heading flushes
-                // currentContent. Paragraphs, lists and tables are always appended to it.
-                flushSection(result, content);
-                // Keep the same contract as WordParser: title contains the complete Markdown
-                // heading, while body and heading are both retained in content. Inline font
-                // emphasis is redundant (and noisy) inside an inferred heading.
                 String heading = "#".repeat(block.headingLevel + 1) + " " + block.plainText;
+                // Match the effective Word output: Heading 1/2 start sections, while
+                // Heading 3-5 stay in the nearest parent section and its preview.
+                if (block.headingLevel <= 2) flushSection(result, content);
                 content.append(heading).append('\n');
             } else {
                 content.append(block.markdown).append('\n');
