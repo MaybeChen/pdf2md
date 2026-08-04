@@ -24,7 +24,9 @@ public class PdfParser implements FileParser {
     private static final Pattern PAGE_NUMBER = Pattern.compile("^(?:[-–—]?\\s*)?(?:第\\s*)?\\d+(?:\\s*页)?(?:\\s*[-–—]?)$");
     private static final Pattern NUMBERED = Pattern.compile("^(?:\\d+(?:\\.\\d+)*[、.)．]?|[一二三四五六七八九十]+、|[（(][一二三四五六七八九十0-9]+[）)])\\s*.+");
     private static final Pattern BULLET = Pattern.compile("^[•●▪◦‣·*+-]\\s*.+");
-    private static final Pattern HEADING_NUMBER = Pattern.compile("^(?:\\d+(?:\\.\\d+){0,4}|[一二三四五六七八九十]+、|[（(][一二三四五六七八九十0-9]+[）)])(?:\\s+|(?=[^0-9.]))");
+    private static final Pattern DECIMAL_HEADING = Pattern.compile("^\\d+(?:\\.\\d+)+\\s+\\S.*");
+    private static final Pattern CHAPTER_HEADING = Pattern.compile("^\\d+\\s+\\S.*");
+    private static final Pattern CHINESE_HEADING = Pattern.compile("^(?:[一二三四五六七八九十]+、|[（(][一二三四五六七八九十0-9]+[）)])\\s*\\S.*");
 
     @Override
     public String[] getSupportedExtensions() { return new String[]{".pdf"}; }
@@ -123,9 +125,10 @@ public class PdfParser implements FileParser {
         String text = line.text().strip();
         if (text.length() > 100) return 0;
         float delta = line.size - body;
-        boolean numbered = HEADING_NUMBER.matcher(text).find();
+        boolean numbered = isHeadingNumber(text);
+        boolean compact = line.width < line.pageWidth * .8f;
         boolean typographicHeading = delta >= 1f
-                || (line.boldRatio() > .6 && line.width < line.pageWidth * .8f);
+                || (numbered && line.boldRatio() > .6 && compact);
 
         // A number at the beginning is not sufficient evidence: numbered list items such as
         // "1. Upload a file" are body paragraphs. The previous implementation treated every
@@ -142,6 +145,15 @@ public class PdfParser implements FileParser {
             return 1;
         }
         return 4;
+    }
+
+    private boolean isHeadingNumber(String text) {
+        // "1 Introduction" and "1.2 Scope" are heading forms. "1. Upload the
+        // file" is a list item: the trailing dot belongs to the marker, not a
+        // chapter hierarchy, so it must not be allowed to split a section.
+        return CHAPTER_HEADING.matcher(text).matches()
+                || DECIMAL_HEADING.matcher(text).matches()
+                || CHINESE_HEADING.matcher(text).matches();
     }
 
     private boolean isList(String text) { return NUMBERED.matcher(text.strip()).matches() || BULLET.matcher(text.strip()).matches(); }
