@@ -82,6 +82,24 @@ class PdfParserTest {
         assertTrue(sections.get(0).getContent().contains("**2. Validate the customer file.**"));
     }
 
+    @Test void paragraphsListsAndTablesOnlyFlushWhenNextHeadingAppears() throws Exception {
+        byte[] bytes = pdf(new PageText().bold(72, 750, 18, "1 First")
+                .at(72, 720, 11, "body paragraph")
+                .at(72, 690, 11, "1. list item")
+                .at(72, 660, 11, "Name").at(250, 660, 11, "Value")
+                .at(72, 640, 11, "A").at(250, 640, 11, "B")
+                .bold(72, 590, 18, "2 Second")
+                .at(72, 560, 11, "second body"));
+
+        List<MarkdownSection> sections = parse(bytes);
+
+        assertEquals(2, sections.size());
+        assertTrue(sections.get(0).getContent().contains("body paragraph"));
+        assertTrue(sections.get(0).getContent().contains("1. list item"));
+        assertTrue(sections.get(0).getContent().contains("| Name | Value |"));
+        assertEquals("## 2 Second", sections.get(1).getTitle());
+    }
+
     @Test void recognizesStableColumnTableAndEscapesCells() throws Exception {
         PageText p = new PageText().at(72,720,11,"Name").at(250,720,11,"Value")
                 .at(72,690,11,"A|B").at(250,690,11,"C\\D");

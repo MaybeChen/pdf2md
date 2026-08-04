@@ -16,6 +16,15 @@ public final class MarkdownSection {
     }
 
     public static Builder builder() { return new Builder(); }
+
+    /** Creates a paragraph section using the same title convention as WordParser. */
+    public static MarkdownSection paragraph(String content, int order) {
+        String normalized = Objects.requireNonNull(content, "content").strip();
+        String firstLine = normalized.lines().findFirst().orElse("").strip();
+        String title = firstLine.startsWith("#") ? firstLine : "段落 " + order;
+        return builder().title(title).content(normalized).type("paragraph").order(order).build();
+    }
+
     public String getTitle() { return title; }
     public String getContent() { return content; }
     public String getType() { return type; }

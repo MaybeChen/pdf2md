@@ -54,28 +54,31 @@ public class PdfParser implements FileParser {
         float bodySize = bodyFontSize(lines);
         List<Block> blocks = formBlocks(lines, bodySize);
         List<MarkdownSection> result = new ArrayList<>();
-        String title = null;
         StringBuilder content = new StringBuilder();
         for (Block block : blocks) {
             if (block.headingLevel > 0) {
-                if (content.length() > 0) addSection(result, title, content);
+                // This intentionally mirrors WordParser.parseDocx: only a heading flushes
+                // currentContent. Paragraphs, lists and tables are always appended to it.
+                flushSection(result, content);
                 // Keep the same contract as WordParser: title contains the complete Markdown
                 // heading, while body and heading are both retained in content. Inline font
                 // emphasis is redundant (and noisy) inside an inferred heading.
-                title = "#".repeat(block.headingLevel + 1) + " " + block.plainText;
-                content = new StringBuilder(title).append("\n\n");
+                String heading = "#".repeat(block.headingLevel + 1) + " " + block.plainText;
+                content.append(heading).append('\n');
             } else {
-                content.append(block.markdown).append("\n\n");
+                content.append(block.markdown).append('\n');
             }
         }
-        if (content.length() > 0) addSection(result, title, content);
+        flushSection(result, content);
         return result;
     }
 
-    private void addSection(List<MarkdownSection> out, String title, StringBuilder text) {
-        int order = out.size() + 1;
-        out.add(MarkdownSection.builder().title(title == null ? "段落 " + order : title)
-                .content(text.toString().strip()).type("paragraph").order(order).build());
+    private void flushSection(List<MarkdownSection> sections, StringBuilder currentContent) {
+        String sectionContent = currentContent.toString().strip();
+        if (!sectionContent.isEmpty()) {
+            sections.add(MarkdownSection.paragraph(sectionContent, sections.size() + 1));
+        }
+        currentContent.setLength(0);
     }
 
     private List<Line> filterMargins(List<Line> lines) {
@@ -127,7 +130,7 @@ public class PdfParser implements FileParser {
         float delta = line.size - body;
         boolean numbered = isHeadingNumber(text);
         boolean compact = line.width < line.pageWidth * .8f;
-        boolean typographicHeading = delta >= 1f
+        boolean typographicHeading = delta >= 2f
                 || (numbered && line.boldRatio() > .6 && compact);
 
         // A number at the beginning is not sufficient evidence: numbered list items such as
