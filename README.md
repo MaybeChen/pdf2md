@@ -1,15 +1,42 @@
 # pdf2md
 
-基于 PDFBox 文本坐标、面向版面结构的 PDF → Markdown Java 17 解析器。解析器是 Spring `@Component`，Maven 坐标为 `com.huawei.agent:pdf2md`。
+基于 PDFBox 文本坐标、面向版面结构的 PDF → Markdown Java 21 解析器。解析器是 Spring `@Component`，Maven 坐标为 `com.huawei.agent:pdf2md`。
 
 ## 构建
+
+先确认本机安装了 JDK 21 和 Maven 3.9 或更高版本：
+
+```bash
+java -version
+mvn -version
+```
 
 ```bash
 mvn clean test
 mvn package
 ```
 
-## 调用示例
+## 运行
+
+仓库提供了一个命令行入口。将 `example.pdf` 替换为实际 PDF 路径；解析得到的 section JSON 会写到标准输出：
+
+```bash
+mvn compile exec:java \
+  -Dexec.mainClass=com.huawei.agent.Pdf2MdApplication \
+  -Dexec.args="example.pdf"
+```
+
+需要把 JSON 保存到文件时可以重定向标准输出：
+
+```bash
+mvn -q compile exec:java \
+  -Dexec.mainClass=com.huawei.agent.Pdf2MdApplication \
+  -Dexec.args="example.pdf" > output.json
+```
+
+命令行参数必须是一个 `.pdf` 文件。参数缺失或多于一个时程序会打印用法并以状态码 2 退出；文件打不开、PDF 损坏或加密文件没有密码时会返回包含文件名的异常。
+
+## Java 调用示例
 
 ```java
 PdfParser parser = new PdfParser();
