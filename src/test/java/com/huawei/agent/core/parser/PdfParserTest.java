@@ -54,6 +54,20 @@ class PdfParserTest {
         assertEquals(1, count(md, "1. Existing number"));
     }
 
+    @Test void numberedBodyLinesRemainAggregatedInCurrentSection() throws Exception {
+        byte[] bytes = pdf(new PageText().bold(72, 740, 18, "1 Instructions")
+                .at(72, 700, 11, "1. Upload the customer file.")
+                .at(72, 680, 11, "2. Validate the customer file.")
+                .at(72, 660, 11, "3. Submit the customer file."));
+
+        List<MarkdownSection> sections = parse(bytes);
+
+        assertEquals(1, sections.size());
+        assertEquals("## 1 Instructions", sections.get(0).getTitle());
+        assertTrue(sections.get(0).getContent().contains("1. Upload the customer file."));
+        assertTrue(sections.get(0).getContent().contains("3. Submit the customer file."));
+    }
+
     @Test void recognizesStableColumnTableAndEscapesCells() throws Exception {
         PageText p = new PageText().at(72,720,11,"Name").at(250,720,11,"Value")
                 .at(72,690,11,"A|B").at(250,690,11,"C\\D");

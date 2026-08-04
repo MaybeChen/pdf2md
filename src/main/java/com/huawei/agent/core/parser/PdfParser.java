@@ -121,17 +121,25 @@ public class PdfParser implements FileParser {
 
     private int headingLevel(Line line, float body) {
         String text = line.text().strip();
-        if (text.length() > 100 || isList(text) && !HEADING_NUMBER.matcher(text).find()) return 0;
+        if (text.length() > 100) return 0;
         float delta = line.size - body;
-        boolean signal = delta >= 1f || (line.boldRatio() > .6 && line.width < line.pageWidth * .8f) || HEADING_NUMBER.matcher(text).find();
-        if (!signal) return 0;
+        boolean numbered = HEADING_NUMBER.matcher(text).find();
+        boolean typographicHeading = delta >= 1f
+                || (line.boldRatio() > .6 && line.width < line.pageWidth * .8f);
+
+        // A number at the beginning is not sufficient evidence: numbered list items such as
+        // "1. Upload a file" are body paragraphs. The previous implementation treated every
+        // such line as a heading and consequently ended the current section on every line.
+        // Numbering only determines the level after font size/bold/line-width has established
+        // that the line is actually a heading.
+        if (!typographicHeading) return 0;
         if (delta >= 7) return 1;
         if (delta >= 4) return 2;
         if (delta >= 2) return 3;
-        if (HEADING_NUMBER.matcher(text).find()) {
+        if (numbered) {
             String prefix = text.split("\\s+", 2)[0];
             if (prefix.matches("\\d+(?:\\.\\d+)+.*")) return Math.min(5, 1 + prefix.replaceAll("[^.]", "").length());
-            return 2;
+            return 1;
         }
         return 4;
     }
