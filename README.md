@@ -36,6 +36,25 @@ mvn -q compile exec:java \
 
 命令行参数必须是一个 `.pdf` 文件。参数缺失或多于一个时程序会打印用法并以状态码 2 退出；文件打不开、PDF 损坏或加密文件没有密码时会返回包含文件名的异常。
 
+### 在 IntelliJ IDEA 中运行
+
+可以直接在 IntelliJ IDEA 中构建和运行：
+
+1. 选择 **File → Open**，打开包含 `pom.xml` 的仓库根目录。
+2. 等待 IDEA 完成 Maven 导入；如果没有自动导入，在 `pom.xml` 上右键选择 **Add as Maven Project**。
+3. 在 **File → Project Structure → Project** 中将 Project SDK 和 Language level 都设为 **JDK 21**。
+4. 打开 `src/main/java/com/huawei/agent/Pdf2MdApplication.java`，点击 `main` 方法左侧的绿色运行按钮。
+5. 首次运行会因为缺少参数而显示用法。选择 **Run → Edit Configurations**，在该 Application 配置的 **Program arguments** 中填入 PDF 的绝对路径，例如：
+
+   ```text
+   /Users/example/Documents/report.pdf
+   ```
+
+   如果路径包含空格，请用双引号包裹，例如 `"/Users/example/My Documents/report.pdf"`。
+6. 再次运行后，解析出的 JSON 会显示在 IDEA 的 **Run** 控制台中。
+
+也可以打开 IDEA 右侧的 **Maven** 工具窗口，依次运行 `Lifecycle → test` 或 `Lifecycle → package`。单元测试可以在 `src/test/java` 目录或具体测试类上右键选择 **Run Tests**。
+
 ## Java 调用示例
 
 ```java
