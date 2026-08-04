@@ -57,9 +57,11 @@ public class PdfParser implements FileParser {
         for (Block block : blocks) {
             if (block.headingLevel > 0) {
                 if (content.length() > 0) addSection(result, title, content);
-                title = block.plainText;
-                content = new StringBuilder("#".repeat(block.headingLevel + 1)).append(' ')
-                        .append(block.markdown).append("\n\n");
+                // Keep the same contract as WordParser: title contains the complete Markdown
+                // heading, while body and heading are both retained in content. Inline font
+                // emphasis is redundant (and noisy) inside an inferred heading.
+                title = "#".repeat(block.headingLevel + 1) + " " + block.plainText;
+                content = new StringBuilder(title).append("\n\n");
             } else {
                 content.append(block.markdown).append("\n\n");
             }
@@ -238,18 +240,30 @@ public class PdfParser implements FileParser {
             float max=glyphs.stream().map(v->v.x+v.width).max(Float::compare).orElse(x); width=max-x;
             size=(float)glyphs.stream().mapToDouble(v->v.size).average().orElse(0);
         }
-        String text() { StringBuilder s=new StringBuilder(); glyphs.forEach(g->s.append(g.text)); return s.toString(); }
+        String text() {
+            StringBuilder text = new StringBuilder(); Glyph previous = null;
+            for (Glyph glyph : glyphs) {
+                appendInferredSpace(text, previous, glyph);
+                text.append(glyph.text); previous = glyph;
+            }
+            return text.toString();
+        }
         float maxX() { return x+width; }
         boolean margin() { return y < pageHeight*.1f || y > pageHeight*.9f; }
         double boldRatio() { return glyphs.stream().filter(g->g.bold).count()/(double)glyphs.size(); }
         String markdown() {
-            StringBuilder out=new StringBuilder(); Boolean b=null,i=null;
+            StringBuilder out=new StringBuilder(); Boolean b=null,i=null; Glyph previous=null;
             for (Glyph g:glyphs) {
+                boolean space = needsSpace(previous, g);
                 if (b==null || b!=g.bold || i!=g.italic) {
                     if (b!=null) out.append(marker(b,i));
+                    if (space) out.append(' ');
                     b=g.bold;i=g.italic; out.append(marker(b,i));
+                } else if (space) {
+                    out.append(' ');
                 }
                 out.append(g.text);
+                previous=g;
             }
             if (b!=null) out.append(marker(b,i));
             return out.toString();
@@ -263,10 +277,24 @@ public class PdfParser implements FileParser {
         List<String> cellMarkdown() {
             List<StringBuilder> cells=new ArrayList<>(); Glyph previous=null;
             for (Glyph g:glyphs) {
-                if (previous==null || g.x-(previous.x+previous.width)>Math.max(18,size*1.8f)) cells.add(new StringBuilder());
+                boolean newCell = previous==null || g.x-(previous.x+previous.width)>Math.max(18,size*1.8f);
+                if (newCell) cells.add(new StringBuilder());
+                else appendInferredSpace(cells.get(cells.size()-1), previous, g);
                 cells.get(cells.size()-1).append(g.text.replace("\\","\\\\").replace("|","\\|")); previous=g;
             }
             return cells.stream().map(StringBuilder::toString).toList();
+        }
+        private static void appendInferredSpace(StringBuilder target, Glyph previous, Glyph current) {
+            if (needsSpace(previous, current)) target.append(' ');
+        }
+        private static boolean needsSpace(Glyph previous, Glyph current) {
+            if (previous == null || previous.text.isEmpty() || current.text.isEmpty()
+                    || Character.isWhitespace(previous.text.charAt(previous.text.length()-1))
+                    || Character.isWhitespace(current.text.charAt(0))) return false;
+            float gap = current.x - (previous.x + previous.width);
+            float typicalWidth = Math.max(previous.width / Math.max(1, previous.text.length()),
+                    current.width / Math.max(1, current.text.length()));
+            return gap > Math.max(1.2f, typicalWidth * .45f);
         }
     }
 }

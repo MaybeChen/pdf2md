@@ -55,6 +55,30 @@ mvn -q compile exec:java \
 
 也可以打开 IDEA 右侧的 **Maven** 工具窗口，依次运行 `Lifecycle → test` 或 `Lifecycle → package`。单元测试可以在 `src/test/java` 目录或具体测试类上右键选择 **Run Tests**。
 
+### `Usage: pdf2md <input.pdf>` 的处理方法
+
+看到以下内容并不是 PDF 解析失败，而是运行配置中没有传入 PDF 路径：
+
+```text
+Usage: pdf2md <input.pdf>
+```
+
+在 IDEA 中打开 **Run → Edit Configurations**，选中 `Pdf2MdApplication`，在 **Program arguments**（不是 VM options）中填写文件路径。Windows 示例：
+
+```text
+"D:\Documents\report.pdf"
+```
+
+保存配置后重新运行即可。不要将 PDF 路径写入 **VM options**；VM options 只用于 `-D...` 形式的 JVM 参数。
+
+如果控制台首先显示类似下面的提示：
+
+```text
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=...
+```
+
+这是 JVM 提示它读取了系统环境变量 `JAVA_TOOL_OPTIONS`，不是本程序抛出的错误。程序已经能启动时通常可以忽略它。若后续出现证书或 Maven HTTPS 下载错误，再检查该环境变量中的 `javax.net.ssl.trustStore` 是否指向真实存在的 JDK 21 `cacerts` 文件；Windows 路径通常类似 `D:\jdk\lib\security\cacerts`。可以在 Windows“系统属性 → 环境变量”中修正或删除无效的 `JAVA_TOOL_OPTIONS`，然后重启 IDEA。
+
 ## Java 调用示例
 
 ```java
@@ -72,7 +96,7 @@ Spring 应用也可以扫描 `com.huawei.agent` 包并注入 `FileParser`。输�
 [
   {
     "title": "1 概述",
-    "content": "## **1 概述**\n\n这里是正文。",
+    "content": "## 1 概述\n\n这里是正文。",
     "type": "paragraph",
     "order": 1
   }
@@ -88,3 +112,9 @@ Spring 应用也可以扫描 `com.huawei.agent` 包并注入 `FileParser`。输�
 表格识别依赖文本坐标中连续多行的稳定列起点；首行作为表头。它适合规则、文本型表格，但合并单元格、嵌套表格、旋转文字、不规则列和仅由绘图线组成的复杂表格可能降级成普通段落，以避免生成误导性的 Markdown 表格。
 
 PDF 本身通常不保存语义结构，因此标题、栏和段落均属于启发式推断；特殊排版可能需要业务侧后处理。空文件、只有图片或没有有效文本的 PDF 返回空列表。核心模块不绑定任何 OCR 厂商；扫描件可由应用通过独立的 `OcrProvider` 扩展点接入 OCR，再自行进行结构化处理。加密且没有有效密码的 PDF 会返回包含文件名的明确异常。
+
+### 与 WordParser 输出的一致性
+
+PDF 没有 Word 的段落样式和标题级别元数据，因此无法保证逐字符完全一致；`PdfParser` 会尽量遵循相同的 section 契约：标题 section 的 `title` 保存完整 Markdown 标题（例如 `## 1 Introduction`），`content` 也以同一个标题开头，`type` 为 `paragraph`，`order` 连续递增。标题中的 PDF 粗斜体字体不会再额外生成 `**`/`*`，避免出现 `## **1 Introduction**`；正文中的粗斜体仍会保留。
+
+PDF 中单词可能由多个没有空格字符的独立绘制片段组成。解析器会依据相邻片段间的坐标间距补回单词之间的空格，但不会在中文字符之间主动插入西文空格。若某份 PDF 的结果仍与对应 Word 文档差异明显，请同时保留该 PDF 的实际 section 日志（尤其是错误的标题、段落或表格前后各一段），以便针对其字体和坐标特征调整启发式规则。

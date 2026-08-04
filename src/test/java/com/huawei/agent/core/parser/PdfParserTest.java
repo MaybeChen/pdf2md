@@ -38,8 +38,10 @@ class PdfParserTest {
         List<MarkdownSection> sections = parse(bytes);
         assertEquals(2, sections.size());
         assertEquals(List.of(1, 2), sections.stream().map(MarkdownSection::getOrder).toList());
-        assertTrue(sections.get(0).getContent().startsWith("##"));
-        assertTrue(sections.get(1).getContent().startsWith("###"));
+        assertEquals("## 1 Introduction", sections.get(0).getTitle());
+        assertEquals("### 1.1 Details", sections.get(1).getTitle());
+        assertTrue(sections.get(0).getContent().startsWith(sections.get(0).getTitle()));
+        assertTrue(sections.get(1).getContent().startsWith(sections.get(1).getTitle()));
     }
 
     @Test void preservesBoldItalicAndNumberedLists() throws Exception {

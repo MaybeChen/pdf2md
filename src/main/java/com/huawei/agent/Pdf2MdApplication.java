@@ -15,7 +15,10 @@ public final class Pdf2MdApplication {
 
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
-            System.err.println("Usage: pdf2md <input.pdf>");
+            System.err.println("用法: pdf2md <input.pdf>");
+            System.err.println("缺少 PDF 路径。请在 IntelliJ IDEA 的 Run → Edit Configurations → "
+                    + "Program arguments 中填写 PDF 的绝对路径。");
+            System.err.println("示例: \"D:\\Documents\\report.pdf\"");
             System.exit(2);
         }
 
